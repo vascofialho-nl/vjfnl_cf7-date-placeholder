@@ -46,6 +46,6 @@ function vjfnl_cf7_date_placeholder_enqueue_script() {
 
 // without this code the plugin will not update. 
 if (class_exists('VJFNL_CF7_Date_Placeholder_Updater')) {
-    new VJFNL_CF7_Date_Placeholder_Updater(__FILE__, 'https://api.github.com/repos/vascofialho-nl/cf7-date-placeholder/releases/latest');
+    new VJFNL_CF7_Date_Placeholder_Updater(__FILE__, 'https://api.github.com/repos/vascofialho-nl/vjfnl_cf7-date-placeholder/releases/latest');
 }
 add_action('wp_enqueue_scripts', 'vjfnl_cf7_date_placeholder_enqueue_script');require_once plugin_dir_path(__FILE__) . 'includes/updater.php';
