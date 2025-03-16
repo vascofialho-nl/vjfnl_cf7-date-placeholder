@@ -3,87 +3,115 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
-class VJFNL_CF7_Date_Placeholder_Updater {
-    private $plugin_slug;
-    private $github_url;
-    private $plugin_data;
-    private $plugin_file;
-    private $github_response;
+class Plugin_Updater {
+    private $file;
+    private $plugin;
+    private $basename;
+    private $active;
 
-    public function __construct($plugin_file, $github_url) {
-        $this->plugin_file = $plugin_file;
-        $this->github_url = $github_url;
-        $this->plugin_slug = plugin_basename($plugin_file);
-        add_filter('pre_set_site_transient_update_plugins', [$this, 'check_for_update']);
-        add_filter('plugins_api', [$this, 'plugin_info'], 10, 3);
-    }
+    public function __construct($file) {
+        $this->file = $file;
+        $this->plugin = plugin_basename($file);
+        $this->basename = dirname($this->plugin);
+        //$this->active = is_plugin_active($this->plugin);
 
-    public function get_repository_info() {
-        if (!empty($this->github_response)) {
-            return $this->github_response;
-        }
-
-        $response = wp_remote_get($this->github_url);
-        if (is_wp_error($response)) {
-            return false;
-        }
-
-        $this->github_response = json_decode(wp_remote_retrieve_body($response), true);
-        return $this->github_response;
+        add_filter('pre_set_site_transient_update_plugins', array($this, 'check_for_update'));
+        add_filter('plugins_api', array($this, 'plugin_info'), 10, 3);
+        add_filter('upgrader_post_install', array($this, 'after_install'), 10, 3);
     }
 
     public function check_for_update($transient) {
-        if (empty($transient->checked)) {
+        // Bail early if no transient or if 'checked' isn't set
+        if (!is_object($transient) || !isset($transient->checked)) {
             return $transient;
         }
 
-        $repo_info = $this->get_repository_info();
-        if (!$repo_info || !isset($repo_info['tag_name'])) {
-            return $transient;
+        // Plugin and repository details
+        $repo = 'vascofialho-nl/vjfnl_cf7-date-placeholder';
+        $plugin_data = get_plugin_data($this->file);
+        $local_version = $plugin_data['Version'];
+        $remote_version = $this->get_latest_version($repo);
+
+        // Debugging: Log the versions
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Local version: $local_version, Remote version: $remote_version");
         }
 
-        $latest_version = $repo_info['tag_name'];
-        $current_version = $this->get_plugin_version();
-
-        if (version_compare($current_version, $latest_version, '<')) {
-            $transient->response[$this->plugin_slug] = (object) [
-                'slug'        => $this->plugin_slug,
-                'new_version' => $latest_version,
-                'package'     => $repo_info['assets'][0]['browser_download_url'],
-            ];
+        // Only add the update if the remote version is greater than the local version
+        if ($remote_version && version_compare($local_version, $remote_version, '<')) {
+            $transient->response[$this->plugin] = (object) array(
+                'slug'        => $this->basename,
+                'new_version' => $remote_version,
+                'url'         => "https://github.com/$repo",
+                'package'     => "https://github.com/$repo/releases/download/v$remote_version/vjfnl_cf7-date-placeholder.zip",
+                'auto_update' => true,
+            );
+        } else {
+            // Debugging: Log when no update is added
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("No update required: Local version is equal to or newer than the remote version.");
+            }
         }
 
         return $transient;
     }
 
-    public function plugin_info($false, $action, $args) {
-        if ($action !== 'plugin_information' || $args->slug !== $this->plugin_slug) {
+    private function get_latest_version($repo) {
+        $response = wp_remote_get("https://api.github.com/repos/$repo/releases/latest");
+
+        if (is_wp_error($response)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Error fetching latest version: " . $response->get_error_message());
+            }
             return false;
         }
 
-        $repo_info = $this->get_repository_info();
-        if (!$repo_info) {
+        $data = json_decode(wp_remote_retrieve_body($response));
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("GitHub API Response: " . print_r($data, true));
+        }
+
+        return isset($data->tag_name) ? ltrim($data->tag_name, 'v') : false;
+    }
+
+    public function plugin_info($false, $action, $response) {
+        if ($response->slug !== $this->basename) {
             return false;
         }
 
-        return (object) [
-            'name'           => 'CF7 Date Placeholder Add-on',
-            'slug'           => $this->plugin_slug,
-            'version'        => $repo_info['tag_name'],
-            'author'         => 'vascofmdc',
-            'author_profile' => 'https://www.vascofialho.nl',
-            'homepage'       => 'https://github.com/vascofialho-nl/vjfnl_cf7-date-placeholder.git',
-            'download_link'  => $repo_info['assets'][0]['browser_download_url'],
-            'sections'       => [
-            'description'    => 'Adds proper placeholder support for date fields in Contact Form 7.',
-            ],
-        ];
+        //$repo = 'vascofialho-nl/vjfnl_cf7-date-placeholder';
+
+        $response->name = 'CF7 Date Placeholder Add-on';
+        $response->slug = $this->basename;
+        $response->version = $this->get_latest_version($repo);
+        $response->author = '<a href="http://www.vascofialho.nl">vascofmdc</a>';
+        $response->homepage = 'https://github.com/vascofialho-nl/vjfnl_cf7-date-placeholder';
+        $response->download_link = "https://github.com/$repo/releases/download/v{$response->version}/vjfnl_cf7-date-placeholder.zip";
+        $response->sections = array(
+            'description'  => 'Adds proper placeholder support for date fields in Contact Form 7',
+            'installation' => '1. Upload the plugin files to the `/wp-content/plugins/` directory.<br>2. Activate the plugin.<br>3. Configure settings under "Copyright Settings."',
+            'changelog'    => '',
+        );
+
+        return $response;
     }
 
-    private function get_plugin_version() {
-        if (!$this->plugin_data) {
-            $this->plugin_data = get_plugin_data($this->plugin_file);
+    public function after_install($response, $hook_extra, $result) {
+        global $wp_filesystem;
+        $install_dir = plugin_dir_path($this->file);
+
+        $wp_filesystem->move($result['destination'], $install_dir);
+        $result['destination'] = $install_dir;
+
+        if ($this->active) {
+            activate_plugin($this->plugin);
         }
-        return $this->plugin_data['Version'];
+
+        return $result;
     }
+}
+
+// Initialize the updater
+if (is_admin()) {
+    $updater = new Plugin_Updater(__FILE__);
 }

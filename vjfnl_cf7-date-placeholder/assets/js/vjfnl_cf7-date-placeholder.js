@@ -2,31 +2,48 @@
 /* All the Javascripts and jayquerries be here 
 /* ========================================================================================================================== */
 
-
-
 document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll("input[type='date']").forEach(function(dateField) {
-        let placeholderText = dateField.getAttribute("placeholder") || "Geboortedatum";
+    function applyPlaceholderFix(targetNode) {
+        let dateFields = (targetNode || document).querySelectorAll("input[type='date']");
+        dateFields.forEach(function(dateField) {
+            if (!dateField.dataset.vjfnlProcessed) { // Avoid re-processing the same field
+                let placeholderText = dateField.getAttribute("placeholder") || "Geboortedatum";
+                console.log("Applying placeholder fix to:", dateField);
 
-        console.log("Found date field:", dateField); // Debug log
-        console.log("Setting type to text");
+                dateField.setAttribute("type", "text");
+                dateField.placeholder = placeholderText;
 
-        setTimeout(() => { 
-            dateField.setAttribute("type", "text");
-            dateField.placeholder = placeholderText;
-        }, 500); // Delay to let CF7 finish processing
+                dateField.addEventListener("focus", function() {
+                    this.setAttribute("type", "date");
+                });
 
-        dateField.addEventListener("focus", function() {
-            console.log("Clicked on date field, switching to date type");
-            this.setAttribute("type", "date"); 
-        });
+                dateField.addEventListener("blur", function() {
+                    if (!this.value) {
+                        this.setAttribute("type", "text");
+                        this.placeholder = placeholderText;
+                    }
+                });
 
-        dateField.addEventListener("blur", function() {
-            if (!this.value) {
-                console.log("Field is empty, switching back to text");
-                this.setAttribute("type", "text"); 
-                this.placeholder = placeholderText;
+                dateField.dataset.vjfnlProcessed = "true"; // Mark as processed
             }
         });
+    }
+
+    // Run on page load
+    applyPlaceholderFix();
+
+    // Watch for dynamic changes in the form
+    let observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // Ensure it's an element
+                    applyPlaceholderFix(node);
+                }
+            });
+        });
     });
+
+    observer.observe(document.body, { childList: true, subtree: true });
 });
+ 
+console.log("CF7 Date Placeholder script loaded!");

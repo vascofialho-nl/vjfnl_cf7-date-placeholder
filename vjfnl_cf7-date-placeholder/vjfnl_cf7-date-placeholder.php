@@ -16,6 +16,11 @@ if (!defined('ABSPATH')) {
     exit; // Exit if accessed directly.
 }
 
+// Include updater system (connected with github)
+require_once plugin_dir_path( __FILE__ ) . 'includes/updater.php';
+define( 'PLUGIN_VERSION', '1.0.5' ); // Adjust this when you release a new version.
+new Plugin_Updater( __FILE__, PLUGIN_VERSION );
+
 // Check if Contact Form 7 is active, and deactivate if not
 function vjfnl_cf7_check_and_deactivate() {
     if (!class_exists('WPCF7')) {
@@ -30,22 +35,15 @@ function vjfnl_cf7_missing_plugin_notice() {
     echo '<div class="notice notice-error"><p><strong>CF7 Date Placeholder Add-on</strong> has been deactivated because Contact Form 7 is not installed or active. Please install and activate <a href="https://wordpress.org/plugins/contact-form-7/" target="_blank">Contact Form 7</a> first.</p></div>';
 }
 
-// Enqueue JavaScript only if CF7 is active
-function vjfnl_cf7_date_placeholder_enqueue_script() {
-    if (class_exists('WPCF7') && (is_page() || is_single())) {
-        wp_enqueue_script(
-            'vjfnl_cf7-date-placeholder',
-            plugin_dir_url(__FILE__) . 'assets/js/vjfnl_cf7-date-placeholder.js',
-            array('jquery'),
-            '1.0.3',
-            true
-        );
-    }
-}
 
 
-// without this code the plugin will not update. 
-if (class_exists('VJFNL_CF7_Date_Placeholder_Updater')) {
-    new VJFNL_CF7_Date_Placeholder_Updater(__FILE__, 'https://api.github.com/repos/vascofialho-nl/vjfnl_cf7-date-placeholder/releases/latest');
+function vjfnl_cf7_enqueue_date_placeholder_script() {
+    wp_enqueue_script(
+        'vjfnl-cf7-date-placeholder',
+        plugins_url('assets/js/vjfnl_cf7-date-placeholder.js', __FILE__), 
+        array('jquery'),
+        '1.0.5',
+        true
+    );
 }
-add_action('wp_enqueue_scripts', 'vjfnl_cf7_date_placeholder_enqueue_script');require_once plugin_dir_path(__FILE__) . 'includes/updater.php';
+add_action('wp_enqueue_scripts', 'vjfnl_cf7_enqueue_date_placeholder_script');
