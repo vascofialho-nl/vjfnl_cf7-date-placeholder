@@ -1,9 +1,9 @@
 <?php
 /**
  * Plugin Name: CF7 Date Placeholder Add-on
- * Plugin URI: https://www.vascofialho.nl/vjfnl_cf7-date-placeholder
+ * Plugin URI: https://www.vascofialho.nl/wordpress/plugins/date-placeholder-field-for-contact-form-7/
  * Description: Adds proper placeholder support for date fields in Contact Form 7.
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: vascofmdc 
  * Author URI: https://www.vascofialho.nl
  * License: GPL2

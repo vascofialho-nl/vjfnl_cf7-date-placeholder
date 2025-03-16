@@ -3,7 +3,7 @@ Contributors: vascofmdc
 Tags: contact form 7, cf7, placeholder, date field  
 Requires at least: 5.2  
 Tested up to: 6.4  
-Stable tag: 1.0.4  
+Stable tag: 1.0.5  
 Requires PHP: 7.0  
 License: GPL-2.0+  
 License URI: https://www.gnu.org/licenses/gpl-2.0.html  
@@ -41,7 +41,10 @@ cf7-date-placeholder/
 │── cf7-date-placeholder.php
 │── readme.txt 
 
-== Changelog ==  
+== Changelog ==
+
+= 1.0.5 =
+- added plugin url to metadaata
 
 = 1.0.4 =  
 - **Added GitHub update support** for automatic plugin updates.  
